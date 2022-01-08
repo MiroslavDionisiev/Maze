@@ -11,13 +11,13 @@ fn main() -> GameResult
 
     let win_setup = WindowSetup::default().title("Maze");
 
-    let mut asset_path = path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    asset_path.push("resources");
+    //let mut asset_path = path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    //asset_path.push("resources");
 
     let (mut ctx, event_loop) = ContextBuilder::new("Maze", "Miroslav")
         .window_setup(win_setup)
         .window_mode(win_mode)
-        .add_resource_path(asset_path.clone())
+        /* .add_resource_path(asset_path.clone())*/
         .build()
         .unwrap();
         
