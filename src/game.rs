@@ -1,73 +1,15 @@
 use ggez::{
-    event::{self, EventHandler, KeyCode},
-    graphics::{self, Color, DrawMode, DrawParam, Image},
+    event::{self, EventHandler},
+    graphics::{self, DrawMode, DrawParam, Image},
     Context, GameResult,
     input,
     timer,
     mint::{Point2}
 };
 use std::collections::HashMap;
-use rand::{self, Rng};
 
-pub struct Player
-{
-    x: usize,
-    y: usize
-}
-
-impl Player
-{
-    pub fn new(x: usize, y: usize) -> Self
-    {
-        Player{x: x, y: y}
-    }
-
-    pub fn update(&mut self, x: usize, y: usize)
-    {
-        self.x = x;
-        self.y = y;
-    }
-}
-
-pub struct Bot
-{
-    x: usize,
-    y: usize,
-    time_until_next_step: f32,
-    direction: char,
-    is_on_exit: bool
-}
-
-impl Bot
-{
-    pub fn new(x: usize, y: usize) -> Self
-    {
-        let directions = ['W', 'D', 'A', 'S'];
-        let mut rng = rand::thread_rng();
-        let random_number = rng.gen_range(0..4);
-        Bot{x: x, y: y, time_until_next_step: 0.2, direction: directions[random_number], is_on_exit: false}
-    }
-
-    pub fn update_position(&mut self, x: usize, y: usize, is_on_exit: bool)
-    {
-        self.x = x;
-        self.y = y;
-        self.is_on_exit = is_on_exit;
-    }
-
-    pub fn update_direction(&mut self)
-    {
-        let directions = ['W', 'D', 'A', 'S'];
-        let mut rng = rand::thread_rng();
-        let random_number = rng.gen_range(0..4);
-        self.direction = directions[random_number];
-    }
-
-    pub fn restart_timer(&mut self)
-    {
-        self.time_until_next_step = 0.2;
-    }
-}
+use Maze::bot::Bot;
+use Maze::player::Player;
 
 pub struct MazeGame
 {
@@ -76,14 +18,15 @@ pub struct MazeGame
     ai: Bot,
     game_over: bool,
     result: bool,
-    map: [[char; 19]; 19]
+    map: [[char; 19]; 19],
+    time_until_bot_speed_up: f32
 }
 
 impl MazeGame {
     pub fn new(ctx: &mut Context) -> GameResult<Self>
     {
         let player = Player::new(1, 1);
-        let ai = Bot::new(14, 17);
+        let ai = Bot::new(10, 1);
         let mut elements = HashMap::<char, Image>::new();
         //let img = Image::new(ctx, "\\wall.png")?;
         //elements.insert('W', img);
@@ -119,7 +62,8 @@ impl MazeGame {
             ai: ai,
             game_over: false,
             result: false,
-            map: map
+            map: map,
+            time_until_bot_speed_up: 1.0
         };
         Ok(maze)
     }
@@ -173,6 +117,11 @@ impl MazeGame {
         self.ai.update_position(newX, newY, is_on_exit);
         self.map[self.ai.y][self.ai.x] = 'E';
     }
+
+    pub fn restart_timer(&mut self)
+    {
+        self.time_until_bot_speed_up = 1.0;
+    }
 }
 
 impl EventHandler<ggez::GameError> for MazeGame 
@@ -185,11 +134,12 @@ impl EventHandler<ggez::GameError> for MazeGame
         }
         
         const DESIRED_FPS: u32 = 60;
-
         while timer::check_update_time(ctx, DESIRED_FPS) 
         {
+            self.ai.look_for_player(self.map);
             let seconds = 1.0 / (DESIRED_FPS as f32);
             self.ai.time_until_next_step -= seconds;
+            self.time_until_bot_speed_up -= seconds;
             if self.ai.time_until_next_step <= 0.0
             {
                 match self.ai.direction
@@ -213,6 +163,11 @@ impl EventHandler<ggez::GameError> for MazeGame
                     _ => ()
                 }
                 self.ai.restart_timer();
+            }
+
+            if self.time_until_bot_speed_up <= 0.0
+            {
+                self.restart_timer();
             }
         }
         
