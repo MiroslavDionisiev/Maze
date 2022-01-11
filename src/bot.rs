@@ -1,4 +1,20 @@
+use ggez::{
+    graphics::{self, DrawParam},
+    Context,
+    GameResult,
+    mint::{Point2}
+};
 use rand::{self, Rng};
+
+const BOT_UP_IMG: &str = "\\bot_w.png";
+const BOT_DOWN_IMG: &str = "\\bot_s.png";
+const BOT_LEFT_IMG: &str = "\\bot_a.png";
+const BOT_RIGHT_IMG: &str = "\\bot_d.png";
+const FLOOR_IMG: &str = "\\floor.png";
+const UP: char = 'W';
+const DOWN: char = 'S';
+const LEFT: char = 'A';
+const RIGHT: char = 'D';
 
 pub struct Bot
 {
@@ -40,7 +56,7 @@ impl Bot
         self.time_until_next_step = self.time_for_step;
     }
 
-    pub fn look_for_player(&mut self, maze: [[char; 19]; 19])
+    pub fn look_for_player(&mut self, maze: Vec<Vec<char>>)
     {
         let mut tmp_x = self.x - 1;
         let mut tmp_y = self.y - 1;
@@ -91,5 +107,41 @@ impl Bot
     {
         self.time_for_step -= 0.02;
     }
+    
+    pub fn draw(&self, ctx: &mut Context, x_sq: i32, y_sq: i32) -> GameResult
+    {
+        let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+        let floor = graphics::Image::new(ctx, FLOOR_IMG)?;
+        graphics::draw(ctx, &floor, draw_param)?;
 
+        match self.direction
+        {
+            UP =>
+            {
+                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                let img = graphics::Image::new(ctx, BOT_UP_IMG)?;
+                graphics::draw(ctx, &img, draw_param)?;
+            }
+            DOWN =>
+            {
+                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                let img = graphics::Image::new(ctx, BOT_DOWN_IMG)?;
+                graphics::draw(ctx, &img, draw_param)?;
+            }
+            LEFT =>
+            {
+                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                let img = graphics::Image::new(ctx, BOT_LEFT_IMG)?;
+                graphics::draw(ctx, &img, draw_param)?;
+            }
+            RIGHT =>
+            {
+                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                let img = graphics::Image::new(ctx, BOT_RIGHT_IMG)?;
+                graphics::draw(ctx, &img, draw_param)?;
+            }
+            _ => ()
+        }
+        Ok(())
+    }
 }

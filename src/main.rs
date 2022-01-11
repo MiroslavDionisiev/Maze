@@ -1,25 +1,31 @@
 use ggez::{
-    conf::{WindowMode, WindowSetup},
-    event, ContextBuilder, GameResult,
+    conf::{Conf, WindowMode, WindowSetup},
+    event, ContextBuilder, GameResult, filesystem
 };
 use std::path;
+use std::env;
 mod game;
 
 fn main() -> GameResult
 {
-    let win_mode = WindowMode::default().dimensions(1000.0, 800.0);
+    let conf = Conf::new().
+        window_mode(WindowMode {
+            width: 1000.0,
+            height: 1000.0,
+            ..Default::default()
+        });
 
-    let win_setup = WindowSetup::default().title("Maze");
+    let (mut ctx, event_loop) = ContextBuilder::new("Maze", "Miroslav").
+        default_conf(conf.clone()).
+        build().
+        unwrap();
 
-    //let mut asset_path = path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    //asset_path.push("resources");
-
-    let (mut ctx, event_loop) = ContextBuilder::new("Maze", "Miroslav")
-        .window_setup(win_setup)
-        .window_mode(win_mode)
-        /* .add_resource_path(asset_path.clone())*/
-        .build()
-        .unwrap();
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") 
+    {
+        let mut path = path::PathBuf::from(manifest_dir);
+        path.push("resources");
+        filesystem::mount(&mut ctx, &path, true);
+    }
         
     let game = game::MazeGame::new(&mut ctx)?;
 
