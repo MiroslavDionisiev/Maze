@@ -1,6 +1,6 @@
 use ggez::{
-    conf::{Conf, WindowMode, WindowSetup},
-    event, ContextBuilder, GameResult, filesystem
+    conf::{Conf, WindowMode},
+    event, ContextBuilder, GameResult, filesystem, Context
 };
 use std::path;
 use std::env;
@@ -10,8 +10,8 @@ fn main() -> GameResult
 {
     let conf = Conf::new().
         window_mode(WindowMode {
-            width: 1000.0,
-            height: 1000.0,
+            width: 945.0,
+            height: 945.0,
             ..Default::default()
         });
 
@@ -27,7 +27,7 @@ fn main() -> GameResult
         filesystem::mount(&mut ctx, &path, true);
     }
         
-    let game = game::MazeGame::new(&mut ctx)?;
+    let game = game::MazeGame::new(&mut ctx, conf)?;
 
     event::run(ctx, event_loop, game)
 }

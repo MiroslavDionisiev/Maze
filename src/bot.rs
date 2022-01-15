@@ -5,12 +5,8 @@ use ggez::{
     mint::{Point2}
 };
 use rand::{self, Rng};
+use crate::assets::Assets;
 
-const BOT_UP_IMG: &str = "\\bot_w.png";
-const BOT_DOWN_IMG: &str = "\\bot_s.png";
-const BOT_LEFT_IMG: &str = "\\bot_a.png";
-const BOT_RIGHT_IMG: &str = "\\bot_d.png";
-const FLOOR_IMG: &str = "\\floor.png";
 const UP: char = 'W';
 const DOWN: char = 'S';
 const LEFT: char = 'A';
@@ -23,7 +19,8 @@ pub struct Bot
     pub time_until_next_step: f32,
     pub time_for_step: f32,
     pub direction: char,
-    pub is_on_exit: bool
+    pub is_on_exit: bool,
+    pub is_on_key: bool
 }
 
 impl Bot
@@ -33,21 +30,28 @@ impl Bot
         let directions = ['W', 'D', 'A', 'S'];
         let mut rng = rand::thread_rng();
         let random_number = rng.gen_range(0..4);
-        Bot{x: x, y: y, time_until_next_step: 0.1, time_for_step: 0.1, direction: directions[random_number], is_on_exit: false}
+        Bot{x: x, y: y, time_until_next_step: 0.1, time_for_step: 0.1, direction: directions[random_number], is_on_exit: false, is_on_key: false}
     }
 
-    pub fn update_position(&mut self, x: usize, y: usize, is_on_exit: bool)
+    pub fn update_position(&mut self, x: usize, y: usize, is_on_exit: bool, is_on_key: bool)
     {
         self.x = x;
         self.y = y;
         self.is_on_exit = is_on_exit;
+        self.is_on_key = is_on_key;
     }
 
-    pub fn update_direction(&mut self)
+    pub fn update_direction(&mut self, is_on_cross_road: bool)
     {
-        let directions = ['W', 'D', 'A', 'S'];
+        let mut directions = vec!['W', 'D', 'A', 'S'];
+        if is_on_cross_road
+        {
+            let opposite_direction = get_oposite_direction(self.direction);
+            let index = directions.iter().position(|x| *x == opposite_direction).unwrap();
+            directions.remove(index);
+        }
         let mut rng = rand::thread_rng();
-        let random_number = rng.gen_range(0..4);
+        let random_number = rng.gen_range(0..directions.len());
         self.direction = directions[random_number];
     }
 
@@ -58,8 +62,8 @@ impl Bot
 
     pub fn look_for_player(&mut self, maze: Vec<Vec<char>>)
     {
-        let mut tmp_x = self.x - 1;
-        let mut tmp_y = self.y - 1;
+        let mut tmp_x = self.x;
+        let mut tmp_y = self.y;
 
         while maze[tmp_y][tmp_x] != 'W'
         {
@@ -80,8 +84,8 @@ impl Bot
             tmp_x -= 1;
         }
 
-        let mut tmp_x = self.x + 1;
-        let mut tmp_y = self.y + 1;
+        let mut tmp_x = self.x;
+        let mut tmp_y = self.y;
 
         while maze[tmp_y][tmp_x] != 'W'
         {
@@ -108,40 +112,47 @@ impl Bot
         self.time_for_step -= 0.02;
     }
     
-    pub fn draw(&self, ctx: &mut Context, x_sq: i32, y_sq: i32) -> GameResult
+    pub fn draw(&self, ctx: &mut Context, assets: &Assets, x_sq: i32, y_sq: i32) -> GameResult
     {
         let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-        let floor = graphics::Image::new(ctx, FLOOR_IMG)?;
-        graphics::draw(ctx, &floor, draw_param)?;
+        graphics::draw(ctx, &assets.floor, draw_param)?;
+        if self.is_on_exit
+        {
+            graphics::draw(ctx, &assets.door, draw_param)?;
+        }
 
         match self.direction
         {
             UP =>
             {
-                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                let img = graphics::Image::new(ctx, BOT_UP_IMG)?;
-                graphics::draw(ctx, &img, draw_param)?;
+                graphics::draw(ctx, &assets.bot_up, draw_param)?;
             }
             DOWN =>
             {
-                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                let img = graphics::Image::new(ctx, BOT_DOWN_IMG)?;
-                graphics::draw(ctx, &img, draw_param)?;
+                graphics::draw(ctx, &assets.bot_down, draw_param)?;
             }
             LEFT =>
             {
-                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                let img = graphics::Image::new(ctx, BOT_LEFT_IMG)?;
-                graphics::draw(ctx, &img, draw_param)?;
+                graphics::draw(ctx, &assets.bot_left, draw_param)?;
             }
             RIGHT =>
             {
-                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                let img = graphics::Image::new(ctx, BOT_RIGHT_IMG)?;
-                graphics::draw(ctx, &img, draw_param)?;
+                graphics::draw(ctx, &assets.bot_right, draw_param)?;
             }
             _ => ()
         }
         Ok(())
     }
 }
+
+fn get_oposite_direction(direction: char) -> char
+    {
+        match direction
+        {
+            UP => DOWN,
+            DOWN => UP,
+            LEFT => RIGHT,
+            RIGHT => LEFT,
+            _ => 'q'
+        }
+    }

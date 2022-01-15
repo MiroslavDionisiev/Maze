@@ -140,7 +140,21 @@ impl Graph
                 }
                 else
                 {
-                    row_bellow.push('W');
+                    if i != self.height-1
+                    {
+                        if (j+i)%2==0
+                        {
+                            row_bellow.push('W');
+                        }
+                        else
+                        {
+                            row_bellow.push('.');
+                        }
+                    }
+                    else
+                    {
+                        row_bellow.push('W');
+                    }
                     row_bellow.push('W');
                 }
             }
