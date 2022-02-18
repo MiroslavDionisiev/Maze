@@ -237,4 +237,17 @@ mod tests {
         
         assert_eq!(game.game_state, State::MainState);
     }
+
+    #[test]
+    fn test_pick_up_key()
+    {
+        let mut game = MazeGameMock::new().unwrap();
+        game.map[game.player.y][game.player.x+1] = KEY;
+        game.game_state = State::MainState;
+        assert_eq!(game.player.has_key, false);
+        game.update_player_position(game.player.x+1, game.player.y, event::KeyCode::D);
+        game.update_player_position(game.player.x-1, game.player.y, event::KeyCode::A);
+        assert_eq!(game.map[game.player.y][game.player.x+1], FLOOR);
+        assert_eq!(game.player.has_key, true);
+    }
 }

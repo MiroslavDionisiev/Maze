@@ -1,6 +1,6 @@
 use ggez::{
     conf::{Conf, WindowMode},
-    event, ContextBuilder, GameResult, filesystem, Context
+    event, ContextBuilder, GameResult, filesystem
 };
 use std::path;
 use std::env;

@@ -1,7 +1,7 @@
 use ggez::{
     event::{self, EventHandler},
-    conf::{Conf, WindowMode},
-    graphics::{self, DrawMode, DrawParam},
+    conf::{Conf},
+    graphics::{self, DrawParam},
     Context, GameResult,
     input,
     timer,
@@ -306,7 +306,7 @@ impl EventHandler<ggez::GameError> for MazeGame
                             }
                             PLAYER =>
                             {
-                                self.player.draw(ctx, &self.assets, x_sq, y_sq);
+                                self.player.draw(ctx, &self.assets, x_sq, y_sq)?;
                             }
                             EXIT =>
                             {
@@ -316,7 +316,7 @@ impl EventHandler<ggez::GameError> for MazeGame
                             }
                             BOT =>
                             {
-                                self.ai.draw(ctx, &self.assets, x_sq, y_sq);
+                                self.ai.draw(ctx, &self.assets, x_sq, y_sq)?;
                             }
                             KEY =>
                             {
