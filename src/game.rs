@@ -7,11 +7,12 @@ use ggez::{
     timer,
     mint::{Point2}
 };
+use std::{thread, time};
 use rand::{self, Rng};
-use Maze::bot::Bot;
-use Maze::player::Player;
-use Maze::maze_generator::Graph;
-use Maze::assets::Assets;
+use crate::bot::Bot;
+use crate::player::Player;
+use crate::maze_generator::Graph;
+use crate::assets::Assets;
 
 const CELL_SIZE: i32 = 45;
 const WALL: char = 'W';
@@ -25,16 +26,23 @@ const DOWN: char = 'S';
 const LEFT: char = 'A';
 const RIGHT: char = 'D';
 
+#[derive(PartialEq, Debug)]
+pub enum State
+{
+    Start,
+    MainState,
+    Credits(String)
+}
+
 pub struct MazeGame
 {
-    player: Player,
-    ai: Bot,
-    assets: Assets,
-    game_over: bool,
-    result: bool,
-    map: Vec<Vec<char>>,
-    time_until_bot_speed_up: f32,
-    conf: Conf
+    pub player: Player,
+    pub ai: Bot,
+    pub assets: Assets,
+    pub game_state: State,
+    pub map: Vec<Vec<char>>,
+    pub time_until_bot_speed_up: f32,
+    pub conf: Conf
 }
 
 impl MazeGame {
@@ -67,8 +75,7 @@ impl MazeGame {
             player: player,
             ai: ai,
             assets: assets,
-            game_over: false,
-            result: false,
+            game_state: State::Start,
             map: map,
             time_until_bot_speed_up: 1.0,
             conf: conf
@@ -86,22 +93,23 @@ impl MazeGame {
         } 
         else if self.map[new_y][new_x] == BOT 
         {
-            self.game_over = true;
+            self.game_state = State::Credits(String::from("Game Over!"));
+            let ten_millis = time::Duration::from_secs_f32(0.5);
+            thread::sleep(ten_millis);
             return;
         } 
-        else if self.map[new_y][new_x] == EXIT && self.player.hasKey == true
+        else if self.map[new_y][new_x] == EXIT && self.player.has_key == true
         {
-            self.game_over = true;
-            self.result = true;
+            self.game_state = State::Credits(String::from("You found the exit!"));
             return;
         }
-        else if self.map[new_y][new_x] == EXIT && self.player.hasKey == false
+        else if self.map[new_y][new_x] == EXIT && self.player.has_key == false
         {
             is_on_exit = true;
         }
         else if self.map[new_y][new_x] == KEY
         {
-            self.player.hasKey = true;
+            self.player.has_key = true;
         }
         
         match self.player.is_on_exit
@@ -125,7 +133,9 @@ impl MazeGame {
         } 
         else if self.map[new_y][new_x] == PLAYER
         {
-            self.game_over = true;
+            self.game_state = State::Credits(String::from("Game Over!"));
+            let ten_millis = time::Duration::from_secs_f32(0.5);
+            thread::sleep(ten_millis);
             return;
         } 
         else if self.map[new_y][new_x] == EXIT
@@ -152,53 +162,30 @@ impl MazeGame {
     {
         self.time_until_bot_speed_up = 1.0;
     }
-
-    fn check_for_cross_road(&self) -> bool
-    {
-        let mut count = 0;
-        if self.map[self.ai.y][self.ai.x+1] == '.'
-        {
-            count+=1;
-        }
-        if self.map[self.ai.y][self.ai.x-1] == '.'
-        {
-            count+=1;
-        }
-        if self.map[self.ai.y+1][self.ai.x] == '.'
-        {
-            count+=1;
-        }
-        if self.map[self.ai.y-1][self.ai.x] == '.'
-        {
-            count+=1;
-        }
-
-        if count > 2
-        {
-            return true;
-        }
-        false
-    }
 }
 
 fn generate_location(map: &Vec<Vec<char>>) -> Point2<usize>
+{
+    let mut rng = rand::thread_rng();
+    let mut x = rng.gen_range(0..map[0].len());
+    let mut y = rng.gen_range(0..map.len());
+    while map[y][x] != FLOOR
     {
-        let mut rng = rand::thread_rng();
-        let mut x = rng.gen_range(0..map[0].len());
-        let mut y = rng.gen_range(0..map.len());
-        while map[y][x] != FLOOR
-        {
-            x = rng.gen_range(0..map[0].len());
-            y = rng.gen_range(0..map.len());
-        }
-        Point2 { x: x, y: y }
+        x = rng.gen_range(0..map[0].len());
+        y = rng.gen_range(0..map.len());
     }
+    Point2 { x: x, y: y }
+}
 
 impl EventHandler<ggez::GameError> for MazeGame 
 {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> 
     {
-        if self.game_over 
+        if let State::Credits(s) = &self.game_state
+        {
+            return Ok(());
+        }
+        else if let State::Start = &self.game_state
         {
             return Ok(());
         }
@@ -212,7 +199,7 @@ impl EventHandler<ggez::GameError> for MazeGame
             self.time_until_bot_speed_up -= seconds;
             if self.ai.time_until_next_step <= 0.0
             {
-                let is_on_cross_road = self.check_for_cross_road();
+                let is_on_cross_road = self.ai.check_for_cross_road(self.map.to_owned());
                 if is_on_cross_road
                 {
                     self.ai.update_direction(is_on_cross_road);
@@ -242,6 +229,7 @@ impl EventHandler<ggez::GameError> for MazeGame
 
             if self.time_until_bot_speed_up <= 0.0
             {
+                self.ai.speed_up();
                 self.restart_timer();
             }
         }
@@ -255,80 +243,104 @@ impl EventHandler<ggez::GameError> for MazeGame
         _keymod: input::keyboard::KeyMods,
         _repeat: bool) 
     {
-        match keycode 
+        match self.game_state
         {
-            event::KeyCode::D => self.update_player_position(self.player.x+1, self.player.y, keycode),
-            event::KeyCode::A => self.update_player_position(self.player.x-1, self.player.y, keycode),
-            event::KeyCode::W => self.update_player_position(self.player.x, self.player.y-1, keycode),
-            event::KeyCode::S => self.update_player_position(self.player.x, self.player.y+1, keycode),
+            State::Start =>
+            {
+                match keycode
+                {
+                    event::KeyCode::Space =>  {self.game_state = State::MainState;},
+                    _ => ()
+                }
+            }
+            State::MainState =>
+            {
+                match keycode
+                {
+                    event::KeyCode::D => self.update_player_position(self.player.x+1, self.player.y, keycode),
+                    event::KeyCode::A => self.update_player_position(self.player.x-1, self.player.y, keycode),
+                    event::KeyCode::W => self.update_player_position(self.player.x, self.player.y-1, keycode),
+                    event::KeyCode::S => self.update_player_position(self.player.x, self.player.y+1, keycode),
+                    _ => ()
+                }
+            }
             _ => ()
         }
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> 
     {
-        for (y, row) in self.map.iter().enumerate()
+        match &self.game_state
         {
-            for (x, cell) in row.iter().enumerate()
+            State::Start =>
             {
-                let x_sq = x as i32 * CELL_SIZE;
-                let y_sq = y as i32 * CELL_SIZE;
-
-                match *cell
+                graphics::clear(ctx, graphics::Color::BLACK);
+                let text = graphics::Text::new("< press Space to start >");
+                
+                let top_left = Point2 {
+                    x: (self.conf.window_mode.width - text.width(ctx) - 5.0) / 2.0,
+                    y: (self.conf.window_mode.height - text.height(ctx) - 5.0) / 2.0,
+                };
+                graphics::draw(ctx, &text, graphics::DrawParam::default().dest(top_left))?;
+            },
+            State::MainState => 
+            {
+                for (y, row) in self.map.iter().enumerate()
                 {
-                    WALL =>
+                    for (x, cell) in row.iter().enumerate()
                     {
-                        let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                        graphics::draw(ctx, &self.assets.wall, draw_param)?;
+                        let x_sq = x as i32 * CELL_SIZE;
+                        let y_sq = y as i32 * CELL_SIZE;
+
+                        match *cell
+                        {
+                            WALL =>
+                            {
+                                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                                graphics::draw(ctx, &self.assets.wall, draw_param)?;
+                            }
+                            FLOOR =>
+                            {
+                                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                                graphics::draw(ctx, &self.assets.floor, draw_param)?;
+                            }
+                            PLAYER =>
+                            {
+                                self.player.draw(ctx, &self.assets, x_sq, y_sq);
+                            }
+                            EXIT =>
+                            {
+                                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                                graphics::draw(ctx, &self.assets.floor, draw_param)?;
+                                graphics::draw(ctx, &self.assets.door, draw_param)?;
+                            }
+                            BOT =>
+                            {
+                                self.ai.draw(ctx, &self.assets, x_sq, y_sq);
+                            }
+                            KEY =>
+                            {
+                                let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
+                                graphics::draw(ctx, &self.assets.floor, draw_param)?;
+                                graphics::draw(ctx, &self.assets.key, draw_param)?;
+                            }
+                            _ => {continue;}
+                        }
                     }
-                    FLOOR =>
-                    {
-                        let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                        graphics::draw(ctx, &self.assets.floor, draw_param)?;
-                    }
-                    PLAYER =>
-                    {
-                        self.player.draw(ctx, &self.assets, x_sq, y_sq);
-                    }
-                    EXIT =>
-                    {
-                        let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                        graphics::draw(ctx, &self.assets.floor, draw_param)?;
-                        graphics::draw(ctx, &self.assets.door, draw_param)?;
-                    }
-                    BOT =>
-                    {
-                        self.ai.draw(ctx, &self.assets, x_sq, y_sq);
-                    }
-                    KEY =>
-                    {
-                        let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
-                        graphics::draw(ctx, &self.assets.floor, draw_param)?;
-                        graphics::draw(ctx, &self.assets.key, draw_param)?;
-                    }
-                    _ => {continue;}
                 }
+            },
+            State::Credits(s) => 
+            {
+                graphics::clear(ctx, graphics::Color::BLACK);
+                let text = graphics::Text::new(s.to_owned());
+
+                let top_left = Point2 {
+                    x: (self.conf.window_mode.width - text.width(ctx) - 5.0) / 2.0,
+                    y: (self.conf.window_mode.height - text.height(ctx) - 5.0) / 2.0,
+                };
+                graphics::draw(ctx, &text, graphics::DrawParam::default().dest(top_left))?;
             }
         }
-
-        if self.game_over 
-        {
-            graphics::clear(ctx, graphics::Color::BLACK);
-            let text = match self.result
-            {
-                true => graphics::Text::new("You foun the exit!"),
-                false => graphics::Text::new("Game over!"),
-            };
-
-            let top_left = Point2 {
-                x: (self.conf.window_mode.width - text.width(ctx)) / 2.0,
-                y: (self.conf.window_mode.height - text.height(ctx)) / 2.0,
-            };
-            graphics::draw(ctx, &text, graphics::DrawParam::default().dest(top_left))?;
-            graphics::present(ctx)?;
-            return Ok(())
-        }
-
         graphics::present(ctx)?;
         Ok(())
     }

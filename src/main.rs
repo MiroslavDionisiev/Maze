@@ -4,16 +4,17 @@ use ggez::{
 };
 use std::path;
 use std::env;
-mod game;
+use Maze::game;
 
 fn main() -> GameResult
 {
-    let conf = Conf::new().
+    let mut conf = Conf::new().
         window_mode(WindowMode {
             width: 945.0,
             height: 945.0,
             ..Default::default()
         });
+    conf.window_setup.title = String::from("Maze");
 
     let (mut ctx, event_loop) = ContextBuilder::new("Maze", "Miroslav").
         default_conf(conf.clone()).

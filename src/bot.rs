@@ -12,6 +12,7 @@ const DOWN: char = 'S';
 const LEFT: char = 'A';
 const RIGHT: char = 'D';
 
+#[derive(Clone, Copy)]
 pub struct Bot
 {
     pub x: usize,
@@ -106,10 +107,37 @@ impl Bot
             tmp_x += 1;
         }
     }
+    
+    pub fn check_for_cross_road(&self, map: Vec<Vec<char>>) -> bool
+    {
+        let mut count = 0;
+        if map[self.y][self.x+1] == '.'
+        {
+            count+=1;
+        }
+        if map[self.y][self.x-1] == '.'
+        {
+            count+=1;
+        }
+        if map[self.y+1][self.x] == '.'
+        {
+            count+=1;
+        }
+        if map[self.y-1][self.x] == '.'
+        {
+            count+=1;
+        }
+
+        if count > 2
+        {
+            return true;
+        }
+        false
+    }
 
     pub fn speed_up(&mut self)
     {
-        self.time_for_step -= 0.02;
+        self.time_for_step -= 0.001;
     }
     
     pub fn draw(&self, ctx: &mut Context, assets: &Assets, x_sq: i32, y_sq: i32) -> GameResult

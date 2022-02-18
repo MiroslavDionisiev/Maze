@@ -7,12 +7,13 @@ use ggez::{
 };
 use crate::assets::Assets;
 
+#[derive(Clone, Copy)]
 pub struct Player
 {
     pub x: usize,
     pub y: usize,
     pub direction: KeyCode,
-    pub hasKey: bool,
+    pub has_key: bool,
     pub is_on_exit: bool
 }
 
@@ -20,7 +21,7 @@ impl Player
 {
     pub fn new(x: usize, y: usize) -> Self
     {
-        Player{x: x, y: y, direction: KeyCode::S, hasKey: false, is_on_exit: false}
+        Player{x: x, y: y, direction: KeyCode::S, has_key: false, is_on_exit: false}
     }
 
     pub fn update(&mut self, x: usize, y: usize, is_on_exit: bool)
@@ -39,7 +40,7 @@ impl Player
     {
         let draw_param = DrawParam::new().dest(Point2{x:x_sq as f32, y:y_sq as f32});
         graphics::draw(ctx, &assets.floor, draw_param)?;
-        if self.hasKey == false && self.is_on_exit == true
+        if self.has_key == false && self.is_on_exit == true
         {
             graphics::draw(ctx, &assets.door, draw_param)?;
         }
